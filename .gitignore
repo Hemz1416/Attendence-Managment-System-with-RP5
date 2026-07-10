@@ -1,0 +1,23 @@
+__pycache__/
+*.pyc
+venv/
+*.db
+attendance.log
+*.db-wal
+*.db-shm
+
+# Virtual Environment
+venv/
+
+# Python Cache
+__pycache__/
+*.pyc
+
+# Databases
+*.db
+
+# Logs
+*.log
+
+# System files
+.DS_Store

@@ -1,0 +1,17 @@
+[Unit]
+Description=RP5 AI Attendance Kiosk
+After=network.target graphical.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/RP5
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/pi/.Xauthority
+ExecStart=/bin/bash /home/pi/RP5/run_kiosk.sh
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=graphical.target

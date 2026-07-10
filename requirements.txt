@@ -1,0 +1,8 @@
+numpy>=1.22.0
+opencv-python>=4.5.0
+mediapipe>=0.10.0
+# Note: On Raspberry Pi, install torch CPU-only wheels:
+# pip install torch>=2.0.0 --extra-index-url https://download.pytorch.org/whl/cpu
+torch>=2.0.0
+facenet-pytorch>=2.5.0
+PySide6>=6.5.0
