@@ -14,16 +14,16 @@ class ModelLoaderThread(QThread):
 
     def run(self):
         self.progress.emit("Initializing Database...", 20)
-        import database
+        from app import database
         time.sleep(0.2) # UI buffer
         
         self.progress.emit("Loading MediaPipe Face Detector...", 40)
-        import face_detector
+        from app import face_detector
         dummy_img = np.zeros((480, 640, 3), dtype=np.uint8)
         face_detector.detect_faces(dummy_img)
         
         self.progress.emit("Loading PyTorch FaceNet Model (This takes a moment)...", 60)
-        from face_recognizer import FaceRecognizer
+        from app.face_recognizer import FaceRecognizer
         recognizer = FaceRecognizer()
         
         self.progress.emit("Warming up inference engine...", 90)

@@ -19,12 +19,32 @@ app_dir = Path(__file__).resolve().parent / "app"
 if str(app_dir) not in sys.path:
     sys.path.insert(0, str(app_dir))
 
+import signal
 from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import QTimer
 from app.gui.splash_screen import SplashScreen
 from app.gui.main_window import MainWindow
 
 def main():
+    from app import database
+    database.init_tables()
+    
     app = QApplication(sys.argv)
+    
+    # Graceful shutdown handler for service lifecycle signals (SIGINT, SIGTERM)
+    def handle_signal(sig, frame):
+        logging.info(f"Received signal {sig}. Shutting down application gracefully...")
+        app.quit()
+        
+    signal.signal(signal.SIGINT, handle_signal)
+    signal.signal(signal.SIGTERM, handle_signal)
+    
+    # Heartbeat timer to periodically release the Python interpreter lock
+    # enabling prompt signal delivery while the Qt event loop is running.
+    timer = QTimer()
+    timer.start(500)
+    timer.timeout.connect(lambda: None)
+    app.timer = timer  # Keep reference alive
     
     # Initialize the animated splash screen
     splash = SplashScreen()

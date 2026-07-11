@@ -11,6 +11,8 @@ class FaceRecognizer:
         logging.info("Loading FaceNet Recognition Model...")
         from facenet_pytorch import InceptionResnetV1
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if self.device.type == "cpu":
+            torch.set_num_threads(2)
         self.model = InceptionResnetV1(pretrained="vggface2").eval().to(self.device)
         logging.info(f"FaceNet loaded successfully on device: {self.device}")
         

@@ -16,12 +16,18 @@ This folder contains the production-ready attendance and registration system opt
 ```text
 RP5/
 ├── app/
-│   ├── register_person.py    # Workflow 1: New user registration script
-│   ├── attendance_login.py   # Workflow 2: Daily attendance login script
+│   ├── gui/                  # PySide6 GUI Components (splash, dashboard, windows)
+│   │   ├── splash_screen.py
+│   │   ├── main_window.py
+│   │   ├── registration_window.py
+│   │   ├── attendance_window.py
+│   │   └── camera_thread.py
+│   ├── attendance_login.py   # Daily attendance manager backend (async worker thread)
 │   ├── face_detector.py      # MediaPipe face detection wrapper
 │   ├── face_recognizer.py    # FaceNet embedding generation and database search
 │   ├── database.py           # SQLite database interactions and event logger
 │   ├── config.py             # Central configuration (thresholds, webcam indices, etc.)
+│   ├── cleanup_enrollment_images.py # Image cleanup storage optimizer
 │   └── utils.py              # Cosine similarity, matching, and MockCapture helpers
 │
 ├── database/
@@ -34,7 +40,7 @@ RP5/
 │
 ├── validate_deployment.py    # RP5 performance latency benchmark
 ├── reset_deployment.py       # Script to safely clear DB and dataset
-├── main.py                   # Central launcher script (console menu)
+├── main.py                   # PySide6 GUI application launcher
 ├── requirements.txt          # Minimal required Python packages
 ├── setup_rpi.sh              # Setup script to prepare the environment
 └── README.md                 # This documentation
@@ -99,7 +105,7 @@ python reset_deployment.py --confirm
    ```bash
    source venv/bin/activate
    ```
-2. **Start the Launcher Menu**:
+2. **Start the Application Launcher**:
    Ensure you run the command from the root of the `RP5` directory:
    ```bash
    python main.py

@@ -144,10 +144,10 @@ def get_detector():
 
         if not found_files:
             mp_version = getattr(mp, '__version__', 'unknown')
-            logging.info(f"Error: No MediaPipe face detection model files found on this system.", file=sys.stderr)
-            logging.info(f"MediaPipe version: {mp_version}", file=sys.stderr)
-            logging.info(f"Python version: {sys.version}", file=sys.stderr)
-            logging.info(f"Detected architecture: {platform.machine()}", file=sys.stderr)
+            logging.error(f"No MediaPipe face detection model files found on this system.")
+            logging.error(f"MediaPipe version: {mp_version}")
+            logging.error(f"Python version: {sys.version}")
+            logging.error(f"Detected architecture: {platform.machine()}")
             raise RuntimeError("No MediaPipe face detection model files found on this system.")
 
         # Prepare dry run frame to test compatibility (using 640x480 webcam resolution for realistic tensor allocation)
@@ -187,11 +187,11 @@ def get_detector():
 
         # If we get here, no model worked
         mp_version = getattr(mp, '__version__', 'unknown')
-        logging.info(f"Failed to initialize MediaPipe Face Detector.", file=sys.stderr)
-        logging.info(f"MediaPipe version: {mp_version}", file=sys.stderr)
-        logging.info(f"Python version: {sys.version}", file=sys.stderr)
-        logging.info(f"Detected architecture: {platform.machine()}", file=sys.stderr)
-        logging.info(f"Models attempted: {[str(p) for p in found_files]}", file=sys.stderr)
+        logging.error(f"Failed to initialize MediaPipe Face Detector.")
+        logging.error(f"MediaPipe version: {mp_version}")
+        logging.error(f"Python version: {sys.version}")
+        logging.error(f"Detected architecture: {platform.machine()}")
+        logging.error(f"Models attempted: {[str(p) for p in found_files]}")
         raise RuntimeError("Could not find any functional MediaPipe face detection model.") from last_err
 
 def detect_faces(frame):

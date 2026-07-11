@@ -44,9 +44,7 @@ class AttendanceWindow(QWidget):
         """)
 
         # Manager for AI logic
-        self.manager = AttendanceManager()
-        # Override recognizer to use the pre-loaded one
-        self.manager.recognizer = recognizer
+        self.manager = AttendanceManager(recognizer=recognizer)
         self.manager.start_worker()
 
         self.setup_ui()
@@ -59,8 +57,13 @@ class AttendanceWindow(QWidget):
         
         self.camera_thread = CameraThread()
         self.camera_thread.frame_ready.connect(self.on_frame_ready)
+        self.camera_thread.error_signal.connect(self.on_camera_error)
         self.camera_thread.finished.connect(self.camera_thread.deleteLater)
         self.camera_thread.start()
+
+    def on_camera_error(self, message):
+        QMessageBox.critical(self, "Camera Error", f"Unable to start the video capture: {message}")
+        self.close_window()
         
         # Log refresh timer
         self.log_timer = QTimer(self)
@@ -229,16 +232,13 @@ class AttendanceWindow(QWidget):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.No
         )
         if reply == QMessageBox.StandardButton.Yes:
-            database.clear_logs()
+            database.clear_all_logs()
             self.refresh_logs()
 
     def close_window(self):
         if self.camera_thread:
             self.camera_thread.stop()
-            if self.parent_window:
-                if not hasattr(self.parent_window, 'dying_threads'):
-                    self.parent_window.dying_threads = []
-                self.parent_window.dying_threads.append(self.camera_thread)
+            self.camera_thread = None
         self.manager.stop_worker()
         if self.parent_window:
             self.parent_window.show()

@@ -10,7 +10,7 @@ from pathlib import Path
 
 from app import config
 from app import utils
-import face_detector
+from app import face_detector
 
 class CameraThread(QThread):
     # Signals
@@ -76,3 +76,4 @@ class CameraThread(QThread):
 
     def stop(self):
         self.running = False
+        self.wait(3000)

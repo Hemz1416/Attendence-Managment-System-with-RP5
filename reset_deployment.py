@@ -4,7 +4,6 @@ import shutil
 import sqlite3
 import argparse
 import subprocess
-import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
@@ -77,6 +76,12 @@ def main():
         if args.confirm:
             try:
                 conn = sqlite3.connect(str(db_path))
+                # Checkpoint and truncate WAL before dropping tables
+                try:
+                    conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                except Exception as e:
+                    logging.warning(f"    -> Warning checkpointing WAL: {e}")
+                
                 cur = conn.cursor()
                 
                 # We drop all tables instead of deleting the file, to avoid permissions issues
@@ -89,6 +94,13 @@ def main():
                 conn.commit()
                 conn.execute("VACUUM")
                 conn.commit()
+                
+                # Truncate checkpoint again to flush vacuum and clear WAL space
+                try:
+                    conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                except Exception:
+                    pass
+                    
                 conn.close()
                 logging.info("    -> All tables dropped successfully")
 
@@ -100,13 +112,29 @@ def main():
                             sidecar.unlink()
                             logging.info(f"    -> Deleted sidecar file {sidecar.name}")
                         except Exception as e:
-                            logging.info(f"    -> Error deleting sidecar file {sidecar.name}: {e}")
+                            logging.warning(f"    -> Warning deleting sidecar file {sidecar.name} (it may be locked): {e}")
             except Exception as e:
                 logging.info(f"    -> Error dropping tables: {e}")
     else:
         logging.info("  Database not found.")
 
     logging.info("\nReset complete!" if args.confirm else "\nDry run complete!")
+
+    # 3. Clean up the application log file if confirmed
+    if args.confirm:
+        logging.info("Shutting down logging to clean up log file...")
+        logging.shutdown()
+        if log_file.exists():
+            try:
+                # Try to unlink log file
+                log_file.unlink()
+            except Exception:
+                # If locked, truncate it instead
+                try:
+                    with open(log_file, 'w', encoding='utf-8') as f:
+                        pass
+                except Exception:
+                    pass
 
 if __name__ == "__main__":
     main()

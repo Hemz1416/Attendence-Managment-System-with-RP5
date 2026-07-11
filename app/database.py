@@ -17,6 +17,7 @@ def get_connection():
         _conn = sqlite3.connect(config.DB_PATH, check_same_thread=False)
         _conn.execute("PRAGMA journal_mode=WAL")
         _conn.execute("PRAGMA synchronous=NORMAL")
+        _conn.execute("PRAGMA busy_timeout=5000")
     return _conn
 
 def close_connection():
@@ -407,13 +408,26 @@ def get_logs_by_date(date_str: str):
         rows = [dict(zip(columns, row)) for row in cur.fetchall()]
     return rows
 
-def clear_logs():
+def clear_attendance_logs():
     """Clear all attendance logs."""
     with _db_lock:
         conn = get_connection()
         cur = conn.cursor()
         cur.execute("DELETE FROM attendance_logs")
         conn.commit()
+
+def clear_recognition_events():
+    """Clear all face recognition events."""
+    with _db_lock:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM recognition_events")
+        conn.commit()
+
+def clear_all_logs():
+    """Clear both attendance logs and recognition events."""
+    clear_attendance_logs()
+    clear_recognition_events()
 
 def count_logs() -> int:
     """Return the total number of attendance logs."""
@@ -456,5 +470,5 @@ def export_logs_json(filepath: str):
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4)
 
-# Initialize required database tables on load
-init_tables()
+# Table initialization has been moved to explicit entrypoints (main.py, validate_deployment.py)
+# to prevent side-effects at import time.

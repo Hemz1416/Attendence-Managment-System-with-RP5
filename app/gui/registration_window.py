@@ -7,7 +7,7 @@ from pathlib import Path
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, 
                                QPushButton, QLabel, QLineEdit, QStackedWidget,
                                QMessageBox, QProgressBar)
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, QThread, Signal
 from PySide6.QtGui import QFont, QPixmap, QPainter, QPen, QColor
 
 
@@ -16,6 +16,36 @@ from app import database
 from app import utils
 from app import cleanup_enrollment_images
 from app.gui.camera_thread import CameraThread
+
+class EmbeddingGeneratorThread(QThread):
+    progress = Signal(int, int)  # completed, total
+    finished = Signal()
+
+    def __init__(self, recognizer, jobs, person_id):
+        super().__init__()
+        self.recognizer = recognizer
+        self.jobs = jobs
+        self.person_id = person_id
+
+    def run(self):
+        for idx, (image_id, crop_path) in enumerate(self.jobs):
+            try:
+                face_crop = cv2.imread(str(crop_path))
+                if face_crop is not None and face_crop.size > 0:
+                    embedding = self.recognizer.generate_embedding(face_crop)
+                    database.save_embedding_record(
+                        image_id=image_id,
+                        person_id=self.person_id,
+                        model_name=config.RECOGNIZER_MODEL_NAME,
+                        embedding_vector=embedding,
+                        embedding_dim=len(embedding),
+                        detector_name="MediaPipe",
+                        session_id="registration"
+                    )
+            except Exception as e:
+                logging.warning(f" Failed to generate embedding in background: {e}")
+            self.progress.emit(idx + 1, len(self.jobs))
+        self.finished.emit()
 
 class RegistrationWindow(QWidget):
     def __init__(self, recognizer, parent=None):
@@ -78,6 +108,8 @@ class RegistrationWindow(QWidget):
         self.total_poses = len(config.REGISTRATION_PLAN)
         self.target_count = self.total_poses * self.samples_per_pose
         self.saved_count = 0
+        self.embedding_jobs = []
+        self.embed_thread = None
         
         self.state = "waiting" # waiting, countdown, capturing, complete
         self.countdown_val = 3
@@ -171,14 +203,20 @@ class RegistrationWindow(QWidget):
         self.cropped_dir.mkdir(parents=True, exist_ok=True)
         
         self.saved_count = 0
+        self.embedding_jobs = []
         self.update_progress_ui()
         self.lbl_instruction.setText("Press 'Start Sequence' when ready.")
         self.stacked.setCurrentIndex(1)
         
         self.camera_thread = CameraThread()
         self.camera_thread.frame_ready.connect(self.on_frame_ready)
+        self.camera_thread.error_signal.connect(self.on_camera_error)
         self.camera_thread.finished.connect(self.camera_thread.deleteLater)
         self.camera_thread.start()
+
+    def on_camera_error(self, message):
+        QMessageBox.critical(self, "Camera Error", f"Unable to start the video capture: {message}")
+        self.close_window()
 
     def start_sequence(self):
         self.btn_capture.setEnabled(False)
@@ -187,8 +225,8 @@ class RegistrationWindow(QWidget):
     def start_next_pose_countdown(self):
         pose_index = self.saved_count // self.samples_per_pose
         if pose_index >= self.total_poses:
-            self.state = "complete"
-            self.complete_registration()
+            self.state = "generating_embeddings"
+            self.start_embedding_generation()
             return
             
         step = config.REGISTRATION_PLAN[pose_index]
@@ -266,7 +304,7 @@ class RegistrationWindow(QWidget):
             if face_crop.size > 0:
                 blur_val = utils.calculate_blur(face_crop)
                 if blur_val >= 30.0:
-                    self.save_crop(raw_frame, face_crop)
+                    self.save_crop(raw_frame, face_crop, blur_val)
                     self.burst_count += 1
                     self.saved_count += 1
                     self.update_progress_ui()
@@ -275,7 +313,7 @@ class RegistrationWindow(QWidget):
                         self.state = "waiting"
                         self.start_next_pose_countdown()
 
-    def save_crop(self, raw_frame, face_crop):
+    def save_crop(self, raw_frame, face_crop, blur_val):
         filename = f"face_{self.saved_count+1:03d}.jpg"
         filepath = self.person_dir / filename
         cropped_filepath = self.cropped_dir / filename
@@ -300,29 +338,42 @@ class RegistrationWindow(QWidget):
             height=raw_frame.shape[0],
             cropped_width=face_crop.shape[1],
             cropped_height=face_crop.shape[0],
-            blur_score=utils.calculate_blur(face_crop),
+            blur_score=blur_val,
             brightness_score=utils.calculate_brightness(face_crop),
             detector_name="MediaPipe",
             session_id="registration"
         )
         
-        try:
-            embedding = self.recognizer.generate_embedding(face_crop)
-            database.save_embedding_record(
-                image_id=image_id,
-                person_id=self.person_id,
-                model_name=config.RECOGNIZER_MODEL_NAME,
-                embedding_vector=embedding,
-                embedding_dim=len(embedding),
-                detector_name="MediaPipe",
-                session_id="registration"
-            )
-        except Exception as e:
-            logging.warning(f" Failed to generate embedding: {e}")
+        # Queue the job for background template generation
+        self.embedding_jobs.append((image_id, cropped_filepath))
+
+    def start_embedding_generation(self):
+        if self.camera_thread:
+            self.camera_thread.stop()
+            self.camera_thread = None
+            
+        self.btn_capture.setEnabled(False)
+        self.lbl_instruction.setText("Generating Face Templates (0%)...")
+        self.lbl_instruction.setStyleSheet("color: #f9e2af; margin-top: 10px;")
+        self.progress_bar.setValue(0)
+        
+        self.embed_thread = EmbeddingGeneratorThread(self.recognizer, self.embedding_jobs, self.person_id)
+        self.embed_thread.progress.connect(self.on_embedding_progress)
+        self.embed_thread.finished.connect(self.on_embedding_finished)
+        self.embed_thread.start()
+
+    def on_embedding_progress(self, completed, total):
+        percent = int((completed / total) * 100) if total > 0 else 0
+        self.lbl_instruction.setText(f"Generating Face Templates ({percent}%)...")
+        self.progress_bar.setValue(percent)
+
+    def on_embedding_finished(self):
+        self.complete_registration()
 
     def complete_registration(self):
         if self.camera_thread:
             self.camera_thread.stop()
+            self.camera_thread = None
         
         self.lbl_instruction.setText("Registration Complete! Optimizing storage...")
         self.lbl_instruction.setStyleSheet("color: #a6e3a1;")
@@ -351,10 +402,7 @@ class RegistrationWindow(QWidget):
         self.timer.stop()
         if self.camera_thread:
             self.camera_thread.stop()
-            if self.parent_window:
-                if not hasattr(self.parent_window, 'dying_threads'):
-                    self.parent_window.dying_threads = []
-                self.parent_window.dying_threads.append(self.camera_thread)
+            self.camera_thread = None
         if self.parent_window:
             self.parent_window.show()
         self.close()

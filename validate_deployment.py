@@ -25,9 +25,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "app"))
 
 from app import config  # type: ignore
 from app import database  # type: ignore
-import face_detector  # type: ignore
+from app import face_detector  # type: ignore
 from app import utils  # type: ignore
-from face_recognizer import FaceRecognizer  # type: ignore
+from app.face_recognizer import FaceRecognizer  # type: ignore
 
 import platform
 try:
@@ -43,6 +43,7 @@ except ImportError:
     HAS_MP = False
 
 def main():
+    database.init_tables()
     # Pre-load gallery for banner stats
     gallery = database.load_gallery_embeddings(config.RECOGNIZER_MODEL_NAME)
     num_embeddings = len(gallery)
@@ -230,4 +231,8 @@ def main():
         logging.info("\n[FAILURE] Performance is below RP5 minimum requirements on one or more metrics.")
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(message)s"
+    )
     main()

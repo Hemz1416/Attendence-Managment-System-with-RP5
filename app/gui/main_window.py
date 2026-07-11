@@ -141,7 +141,7 @@ class MainWindow(QMainWindow):
         reply = QMessageBox.question(self, "Clear Logs", "Are you sure you want to clear ALL attendance logs?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
         if reply == QMessageBox.StandardButton.Yes:
             try:
-                database.clear_logs()
+                database.clear_all_logs()
                 QMessageBox.information(self, "Success", "Logs cleared successfully.")
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to clear logs: {e}")

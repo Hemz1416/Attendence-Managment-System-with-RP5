@@ -81,6 +81,7 @@ def cleanup_images_for_person(person_id, person_name, dry_run=False):
     logging.info(f"[{person_name}] Deleted {deleted_count} files, saving {mb_saved:.2f} MB.")
 
 def main():
+    database.init_tables()
     logging.info("=" * 60)
     logging.info("      STORAGE OPTIMIZATION: CLEANUP ENROLLMENT IMAGES")
     logging.info("=" * 60)
