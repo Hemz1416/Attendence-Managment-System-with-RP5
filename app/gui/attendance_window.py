@@ -3,8 +3,7 @@ import time
 import numpy as np
 from pathlib import Path
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,  # type: ignore
-                               QPushButton, QLabel, QTableWidget, 
-                               QTableWidgetItem, QHeaderView, QMessageBox)
+                               QPushButton, QLabel, QMessageBox)
 from PySide6.QtCore import Qt, QTimer  # type: ignore
 from PySide6.QtGui import QFont, QPixmap, QPainter, QPen, QColor  # type: ignore
 
@@ -64,55 +63,51 @@ class AttendanceWindow(QWidget):
     def on_camera_error(self, message):
         QMessageBox.critical(self, "Camera Error", f"Unable to start the video capture: {message}")
         self.close_window()
-        
-        # Log refresh timer
-        self.log_timer = QTimer(self)
-        self.log_timer.timeout.connect(self.refresh_logs)
-        self.log_timer.start(5000) # Every 5 seconds
-        self.refresh_logs()
 
     def setup_ui(self):
-        main_layout = QHBoxLayout()
+        main_layout = QVBoxLayout()
+        main_layout.setContentsMargins(40, 40, 40, 40)
+        main_layout.setSpacing(20)
         
-        # Left side: Camera feed
-        left_layout = QVBoxLayout()
+        title = QLabel("Attendance Mode")
+        title.setFont(QFont("Segoe UI", 24, QFont.Weight.Bold))
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setStyleSheet("color: #cdd6f4;")
+        
+        subtitle = QLabel("Please look at the camera to check in")
+        subtitle.setFont(QFont("Segoe UI", 12))
+        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        subtitle.setStyleSheet("color: #a6adc8;")
+        
         self.video_label = QLabel()
         self.video_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.video_label.setStyleSheet("background-color: #000; border-radius: 10px;")
+        self.video_label.setStyleSheet("background-color: #000000; border: 2px solid #45475a; border-radius: 10px;")
         self.video_label.setMinimumSize(640, 480)
         
+        bottom_layout = QHBoxLayout()
         self.lbl_fps = QLabel("FPS: 0.0")
-        
-        left_layout.addWidget(self.video_label, 1)
-        left_layout.addWidget(self.lbl_fps)
-        
-        # Right side: Logs & Controls
-        right_container = QWidget()
-        right_container.setFixedWidth(320)
-        right_layout = QVBoxLayout(right_container)
-        
-        title = QLabel("Today's Attendance")
-        title.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
-        
-        self.table = QTableWidget(0, 3)
-        self.table.setHorizontalHeaderLabels(["Time", "Name", "Score"])
-        self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-        self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.lbl_fps.setStyleSheet("color: #a6adc8; font-size: 14px;")
         
         btn_back = QPushButton("Exit")
         btn_back.clicked.connect(self.close_window)
+        btn_back.setFixedWidth(200)
+        btn_back.setStyleSheet("""
+            QPushButton {
+                background-color: #f38ba8; color: #11111b;
+                border-radius: 8px; font-size: 16px; font-weight: bold; padding: 12px;
+            }
+            QPushButton:hover { background-color: #f5c2e7; }
+        """)
         
-        btn_clear = QPushButton("Clear Logs")
-        btn_clear.clicked.connect(self.clear_logs)
+        bottom_layout.addWidget(self.lbl_fps)
+        bottom_layout.addStretch(1)
+        bottom_layout.addWidget(btn_back)
         
-        right_layout.addWidget(title)
-        right_layout.addWidget(self.table, 1)
-        right_layout.addWidget(btn_clear)
-        right_layout.addWidget(btn_back)
+        main_layout.addWidget(title)
+        main_layout.addWidget(subtitle)
+        main_layout.addWidget(self.video_label, 1, Qt.AlignmentFlag.AlignCenter)
+        main_layout.addLayout(bottom_layout)
         
-        main_layout.addLayout(left_layout, 1)
-        main_layout.addWidget(right_container)
         self.setLayout(main_layout)
 
     def on_frame_ready(self, q_img, raw_frame, faces):
@@ -216,25 +211,7 @@ class AttendanceWindow(QWidget):
             
         self.prev_recognized_faces = current_faces_data
 
-    def refresh_logs(self):
-        logs = database.get_today_logs()
-        self.table.setRowCount(0)
-        for row, log in enumerate(logs):
-            self.table.insertRow(row)
-            self.table.setItem(row, 0, QTableWidgetItem(log["time"]))
-            self.table.setItem(row, 1, QTableWidgetItem(log["person_name"]))
-            score = log.get("recognition_score")
-            score_str = f"{score:.2f}" if score is not None else "-"
-            self.table.setItem(row, 2, QTableWidgetItem(score_str))
 
-    def clear_logs(self):
-        reply = QMessageBox.question(
-            self, "Clear Logs", "Are you sure you want to clear today's attendance logs?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.No
-        )
-        if reply == QMessageBox.StandardButton.Yes:
-            database.clear_all_logs()
-            self.refresh_logs()
 
     def close_window(self):
         if self.camera_thread:

@@ -407,6 +407,15 @@ def get_logs_by_date(date_str: str):
         columns = [col[0] for col in cur.description]
         rows = [dict(zip(columns, row)) for row in cur.fetchall()]
     return rows
+def get_all_logs(limit: int = 1000):
+    """Retrieve all attendance logs ordered by timestamp DESC up to limit."""
+    with _db_lock:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM attendance_logs ORDER BY timestamp DESC LIMIT ?", (limit,))
+        columns = [col[0] for col in cur.description]
+        rows = [dict(zip(columns, row)) for row in cur.fetchall()]
+    return rows
 
 def clear_attendance_logs():
     """Clear all attendance logs."""

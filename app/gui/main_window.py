@@ -6,6 +6,7 @@ from PySide6.QtCore import Qt  # type: ignore
 from PySide6.QtGui import QFont  # type: ignore
 from app.gui.registration_window import RegistrationWindow
 from app.gui.attendance_window import AttendanceWindow
+from app.gui.log_viewer_window import LogViewerWindow
 from app import database
 
 class MainWindow(QMainWindow):
@@ -79,14 +80,17 @@ class MainWindow(QMainWindow):
         
         admin_layout = QHBoxLayout()
         admin_layout.setSpacing(20)
+        self.btn_view_logs = QPushButton("View Logs")
         self.btn_export_csv = QPushButton("Export CSV")
         self.btn_export_json = QPushButton("Export JSON")
         self.btn_clear_logs = QPushButton("Clear Logs")
         
+        self.btn_view_logs.clicked.connect(self.view_logs)
         self.btn_export_csv.clicked.connect(self.export_csv)
         self.btn_export_json.clicked.connect(self.export_json)
         self.btn_clear_logs.clicked.connect(self.clear_logs)
         
+        admin_layout.addWidget(self.btn_view_logs)
         admin_layout.addWidget(self.btn_export_csv)
         admin_layout.addWidget(self.btn_export_json)
         admin_layout.addWidget(self.btn_clear_logs)
@@ -117,6 +121,13 @@ class MainWindow(QMainWindow):
     def open_attendance(self):
         self.att_window = AttendanceWindow(self.recognizer, parent=self)
         self.att_window.show()
+        self.hide()
+
+    def view_logs(self):
+        if not self.check_admin_password():
+            return
+        self.log_viewer = LogViewerWindow(parent=self)
+        self.log_viewer.show()
         self.hide()
 
     def check_admin_password(self):
