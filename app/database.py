@@ -171,6 +171,23 @@ def get_or_create_person(name):
             pid = cur.lastrowid
         return pid
 
+def delete_person(person_id: int):
+    """Delete a person, their images, and their embeddings from the database."""
+    with _db_lock:
+        conn = get_connection()
+        cur = conn.cursor()
+        
+        cur.execute("SELECT image_id FROM images WHERE person_id = ?", (person_id,))
+        image_ids = [row[0] for row in cur.fetchall()]
+        
+        if image_ids:
+            placeholders = ",".join("?" for _ in image_ids)
+            cur.execute(f"DELETE FROM face_embeddings WHERE image_id IN ({placeholders})", image_ids)
+            cur.execute("DELETE FROM images WHERE person_id = ?", (person_id,))
+            
+        cur.execute("DELETE FROM persons WHERE person_id = ?", (person_id,))
+        conn.commit()
+
 def set_profile_image_path(person_id, profile_image_path):
     """Set the representative profile image for a person."""
     with _db_lock:

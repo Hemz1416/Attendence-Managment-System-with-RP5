@@ -191,11 +191,49 @@ class RegistrationWindow(QWidget):
         self.page2.setLayout(layout)
 
     def go_to_page2(self):
+        import re
+        import shutil
+        
         self.person_name = self.name_input.text().strip()
         if not self.person_name:
             QMessageBox.warning(self, "Error", "Name cannot be empty.")
             return
             
+        if not re.match(r"^[a-zA-Z0-9\s\-_]+$", self.person_name):
+            QMessageBox.warning(
+                self, 
+                "Invalid Name", 
+                "Name can only contain alphanumeric characters, spaces, hyphens, or underscores."
+            )
+            return
+
+        # Check if the person is already registered in the database
+        with database._db_lock:
+            conn = database.get_connection()
+            cur = conn.cursor()
+            cur.execute("SELECT person_id FROM persons WHERE name=?", (self.person_name,))
+            row = cur.fetchone()
+
+        if row:
+            existing_pid = row[0]
+            reply = QMessageBox.question(
+                self,
+                "Overwrite Registration",
+                f"'{self.person_name}' is already registered.\n\nDo you want to delete their existing embeddings/photos and re-register?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            )
+            if reply == QMessageBox.StandardButton.Yes:
+                database.delete_person(existing_pid)
+                self.person_dir = Path(config.DATASET_DIR) / self.person_name
+                self.cropped_dir = Path(config.CROPPED_FACES_DIR) / self.person_name
+                if self.person_dir.exists():
+                    shutil.rmtree(self.person_dir)
+                if self.cropped_dir.exists():
+                    shutil.rmtree(self.cropped_dir)
+            else:
+                return
+
         self.person_id = database.get_or_create_person(self.person_name)
         self.person_dir = Path(config.DATASET_DIR) / self.person_name
         self.cropped_dir = Path(config.CROPPED_FACES_DIR) / self.person_name
