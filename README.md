@@ -36,7 +36,7 @@ RP5/
 ├── reset_deployment.py       # Script to safely clear DB and dataset
 ├── main.py                   # Central launcher script (console menu)
 ├── requirements.txt          # Minimal required Python packages
-├── install_rpi.sh            # Setup script to prepare the environment
+├── setup_rpi.sh              # Setup script to prepare the environment
 └── README.md                 # This documentation
 ```
 
@@ -52,8 +52,8 @@ RP5/
 Run the installation script to update the package list, install system libraries (needed by OpenCV), create a Python virtual environment, and install dependencies:
 
 ```bash
-chmod +x install_rpi.sh
-./install_rpi.sh
+chmod +x setup_rpi.sh
+./setup_rpi.sh
 ```
 
 ### 3. Manual Installation (Alternative)
@@ -128,7 +128,7 @@ All parameters are configured in `app/config.py`:
 - **"FaceNet vggface2 weights not found"**: See "First Run Requirements". The Raspberry Pi needs internet access to download the weights on first run.
 - **Low FPS or High Latency**:
   - Run `python validate_deployment.py` to benchmark the system on the device.
-  - Ensure you installed the **CPU-only** PyTorch wheel, as specified in `install_rpi.sh` or `requirements.txt`.
+  - Ensure you installed the **CPU-only** PyTorch wheel, as specified in `setup_rpi.sh` or `requirements.txt`.
 - **Webcam Errors**: Ensure the USB webcam is securely connected. Check `WEBCAM_INDEX` in `app/config.py` (try changing from `0` to `1` or `2`).
 
 # Attendence-Managment-System-with-RP5
