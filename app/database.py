@@ -134,20 +134,13 @@ def init_tables():
         )
         """)
         
-        # Uniqueness constraint to prevent duplicate daily attendance
-        cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_daily_attendance ON recognition_events(person_id, substr(timestamp, 1, 10))")
+        # Drop old uniqueness constraints to allow multiple daily check-ins
+        cur.execute("DROP INDEX IF EXISTS idx_unique_daily_attendance")
+        cur.execute("DROP INDEX IF EXISTS idx_unique_daily_attendance_logs")
         
-        # Deduplicate attendance_logs to avoid IntegrityError if duplicates already exist
-        cur.execute("""
-        DELETE FROM attendance_logs
-        WHERE log_id NOT IN (
-            SELECT MIN(log_id)
-            FROM attendance_logs
-            GROUP BY person_id, date
-        )
-        """)
-        
-        cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_daily_attendance_logs ON attendance_logs(person_id, date)")
+        # Create non-unique indexes for performance
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_daily_attendance ON recognition_events(person_id, substr(timestamp, 1, 10))")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_daily_attendance_logs ON attendance_logs(person_id, date)")
         
         conn.commit()
 
