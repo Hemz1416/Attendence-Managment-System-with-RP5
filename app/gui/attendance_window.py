@@ -117,7 +117,8 @@ class AttendanceWindow(QWidget):
 
     def on_frame_ready(self, q_img, raw_frame, faces):
         curr_time = time.time()
-        fps = 1.0 / (curr_time - self.prev_time)
+        time_diff = curr_time - self.prev_time
+        fps = 1.0 / time_diff if time_diff > 0 else 0.0
         self.prev_time = curr_time
         self.lbl_fps.setText(f"FPS: {fps:.1f}")
         

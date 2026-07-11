@@ -73,6 +73,7 @@ class AttendanceManager:
                     )
                     
                     if person_id is not None:
+                        logging.info(f"[Attendance] Recognized and logged check-in: '{name}' (Similarity: {score:.3f})")
                         database.log_attendance(
                             person_id=person_id,
                             person_name=name,
@@ -81,6 +82,8 @@ class AttendanceManager:
                             detector_name="MediaPipe",
                             device="RP5"
                         )
+                    else:
+                        logging.info(f"[Attendance] Unknown face detected (Similarity: {score:.3f})")
             except Exception as e:
                 logging.warning(f" Error in recognition worker: {e}")
             finally:
