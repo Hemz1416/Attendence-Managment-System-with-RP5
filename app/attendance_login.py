@@ -47,32 +47,23 @@ class AttendanceManager:
             track_id, face_crop = item
             try:
                 name, score, person_id = self.recognizer.recognize_face(face_crop)
-
-                with self.results_lock:
-                    self.recognized_results[track_id] = {
-                        "name": name,
-                        "score": score,
-                        "person_id": person_id,
-                        "last_updated": time.time()
-                    }
                 
-                # Cooldown: only log event if enough time has passed for this person
-                now = time.time()
-                event_key = person_id if person_id is not None else f"unknown_{track_id}"
-                should_log = (now - self.last_event_time.get(event_key, 0)) >= _EVENT_COOLDOWN_SECONDS
-
-                if should_log:
-                    self.last_event_time[event_key] = now
-                    database.log_recognition_event(
-                        person_id=person_id,
-                        person_name=name,
-                        similarity_score=score,
-                        threshold_used=config.DEFAULT_THRESHOLD,
-                        detector_name="MediaPipe",
-                        recognizer_name="FaceNet"
-                    )
+                status = None
+                if person_id is not None:
+                    now = time.time()
+                    event_key = person_id
+                    should_log = (now - self.last_event_time.get(event_key, 0)) >= _EVENT_COOLDOWN_SECONDS
                     
-                    if person_id is not None:
+                    if should_log:
+                        self.last_event_time[event_key] = now
+                        database.log_recognition_event(
+                            person_id=person_id,
+                            person_name=name,
+                            similarity_score=score,
+                            threshold_used=config.DEFAULT_THRESHOLD,
+                            detector_name="MediaPipe",
+                            recognizer_name="FaceNet"
+                        )
                         status = database.log_attendance(
                             person_id=person_id,
                             person_name=name,
@@ -83,7 +74,37 @@ class AttendanceManager:
                         )
                         logging.info(f"[Attendance] '{name}' logged {status} (Similarity: {score:.3f})")
                     else:
+                        # Cooldown active, query the database for the last logged status
+                        with database._db_lock:
+                            conn = database.get_connection()
+                            cur = conn.cursor()
+                            cur.execute("SELECT status FROM attendance_logs WHERE person_id = ? ORDER BY timestamp DESC LIMIT 1", (person_id,))
+                            row = cur.fetchone()
+                            status = row[0] if row else "IN"
+                else:
+                    now = time.time()
+                    event_key = f"unknown_{track_id}"
+                    should_log = (now - self.last_event_time.get(event_key, 0)) >= _EVENT_COOLDOWN_SECONDS
+                    if should_log:
+                        self.last_event_time[event_key] = now
+                        database.log_recognition_event(
+                            person_id=person_id,
+                            person_name=name,
+                            similarity_score=score,
+                            threshold_used=config.DEFAULT_THRESHOLD,
+                            detector_name="MediaPipe",
+                            recognizer_name="FaceNet"
+                        )
                         logging.info(f"[Attendance] Unknown face detected (Similarity: {score:.3f})")
+
+                with self.results_lock:
+                    self.recognized_results[track_id] = {
+                        "name": name,
+                        "score": score,
+                        "person_id": person_id,
+                        "status": status,
+                        "last_updated": time.time()
+                    }
             except Exception as e:
                 logging.warning(f" Error in recognition worker: {e}")
             finally:

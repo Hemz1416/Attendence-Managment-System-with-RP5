@@ -53,6 +53,7 @@ class AttendanceWindow(QWidget):
         self.prev_recognized_faces = []
         self.next_track_id = 0
         self.frame_counter = 0
+        self.no_face_frames = 0
         
         self.camera_thread = CameraThread()
         self.camera_thread.frame_ready.connect(self.on_frame_ready)
@@ -84,6 +85,12 @@ class AttendanceWindow(QWidget):
         self.video_label.setStyleSheet("background-color: #000000; border: 2px solid #45475a; border-radius: 10px;")
         self.video_label.setMinimumSize(640, 480)
         
+        # Prominent status feedback banner
+        self.lbl_status_banner = QLabel("Ready for Check-In")
+        self.lbl_status_banner.setFont(QFont("Segoe UI", 18, QFont.Weight.Bold))
+        self.lbl_status_banner.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_status_banner.setStyleSheet("color: #89b4fa; background-color: #313244; border-radius: 8px; padding: 15px; border: 2px solid #45475a;")
+        
         bottom_layout = QHBoxLayout()
         self.lbl_fps = QLabel("FPS: 0.0")
         self.lbl_fps.setStyleSheet("color: #a6adc8; font-size: 14px;")
@@ -106,6 +113,7 @@ class AttendanceWindow(QWidget):
         main_layout.addWidget(title)
         main_layout.addWidget(subtitle)
         main_layout.addWidget(self.video_label, 1, Qt.AlignmentFlag.AlignCenter)
+        main_layout.addWidget(self.lbl_status_banner)
         main_layout.addLayout(bottom_layout)
         
         self.setLayout(main_layout)
@@ -169,9 +177,11 @@ class AttendanceWindow(QWidget):
                 if cache:
                     matched_name = cache["name"]
                     matched_score = cache["score"]
+                    matched_status = cache.get("status")
                 else:
                     matched_name = "Unknown"
                     matched_score = 0.0
+                    matched_status = None
                     
                 if (not cache or frames_since_rec >= 15) and (track_id not in self.manager.pending_tracks):
                     face_crop = raw_frame[y:y+h_f, x:x+w_f].copy()
@@ -195,7 +205,8 @@ class AttendanceWindow(QWidget):
                 
                 if matched_name != "Unknown":
                     color = QColor(166, 227, 161) # Green
-                    text = f"{matched_name} ({matched_score:.2f})"
+                    status_str = f" [{matched_status}]" if matched_status else ""
+                    text = f"{matched_name}{status_str} ({matched_score:.2f})"
                 else:
                     color = QColor(243, 139, 168) # Red
                     text = "Unknown"
@@ -208,6 +219,36 @@ class AttendanceWindow(QWidget):
 
             painter.end()
             self.video_label.setPixmap(pixmap)
+            
+            # Determine the most confident recognized face to display on the banner
+            best_match = None
+            best_match_score = -1.0
+            for prev in current_faces_data:
+                with self.manager.results_lock:
+                    cache = self.manager.recognized_results.get(prev["track_id"])
+                if cache and cache["name"] != "Unknown" and cache["score"] > best_match_score:
+                    best_match = (cache["name"], cache.get("status"))
+                    best_match_score = cache["score"]
+            
+            if best_match:
+                name, status = best_match
+                self.lbl_status_banner.setText(f"{name} - Logged {status}")
+                if status == "IN":
+                    self.lbl_status_banner.setStyleSheet("color: #a6e3a1; background-color: #2b3d2d; border-radius: 8px; padding: 15px; border: 2px solid #a6e3a1;")
+                else:
+                    self.lbl_status_banner.setStyleSheet("color: #f38ba8; background-color: #3d2b2f; border-radius: 8px; padding: 15px; border: 2px solid #f38ba8;")
+                self.no_face_frames = 0
+            else:
+                self.no_face_frames += 1
+                if self.no_face_frames > 30:
+                    self.lbl_status_banner.setText("Ready for Check-In")
+                    self.lbl_status_banner.setStyleSheet("color: #89b4fa; background-color: #313244; border-radius: 8px; padding: 15px; border: 2px solid #45475a;")
+            
+        else:
+            self.no_face_frames += 1
+            if self.no_face_frames > 30:
+                self.lbl_status_banner.setText("Ready for Check-In")
+                self.lbl_status_banner.setStyleSheet("color: #89b4fa; background-color: #313244; border-radius: 8px; padding: 15px; border: 2px solid #45475a;")
             
         self.prev_recognized_faces = current_faces_data
 
