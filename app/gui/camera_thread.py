@@ -2,8 +2,8 @@ import sys
 import logging
 import time
 import cv2
-from PySide6.QtCore import QThread, Signal
-from PySide6.QtGui import QImage
+from PySide6.QtCore import QThread, Signal  # type: ignore
+from PySide6.QtGui import QImage  # type: ignore
 import numpy as np
 from pathlib import Path
 

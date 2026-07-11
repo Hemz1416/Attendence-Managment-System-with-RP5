@@ -4,11 +4,11 @@ import time
 import cv2
 import numpy as np
 from pathlib import Path
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, 
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,  # type: ignore
                                QPushButton, QLabel, QLineEdit, QStackedWidget,
                                QMessageBox, QProgressBar)
-from PySide6.QtCore import Qt, QTimer, QThread, Signal
-from PySide6.QtGui import QFont, QPixmap, QPainter, QPen, QColor
+from PySide6.QtCore import Qt, QTimer, QThread, Signal  # type: ignore
+from PySide6.QtGui import QFont, QPixmap, QPainter, QPen, QColor  # type: ignore
 
 
 from app import config

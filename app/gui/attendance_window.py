@@ -2,11 +2,11 @@ import sys
 import time
 import numpy as np
 from pathlib import Path
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, 
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,  # type: ignore
                                QPushButton, QLabel, QTableWidget, 
                                QTableWidgetItem, QHeaderView, QMessageBox)
-from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QFont, QPixmap, QPainter, QPen, QColor
+from PySide6.QtCore import Qt, QTimer  # type: ignore
+from PySide6.QtGui import QFont, QPixmap, QPainter, QPen, QColor  # type: ignore
 
 
 from app import database

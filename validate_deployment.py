@@ -31,7 +31,7 @@ from app.face_recognizer import FaceRecognizer  # type: ignore
 
 import platform
 try:
-    import torch
+    import torch  # type: ignore
     HAS_TORCH = True
 except ImportError:
     HAS_TORCH = False

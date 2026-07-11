@@ -1,9 +1,9 @@
 import sys
 import subprocess
 from pathlib import Path
-from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QMessageBox, QFileDialog
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
+from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QMessageBox, QFileDialog, QInputDialog, QLineEdit  # type: ignore
+from PySide6.QtCore import Qt  # type: ignore
+from PySide6.QtGui import QFont  # type: ignore
 from app.gui.registration_window import RegistrationWindow
 from app.gui.attendance_window import AttendanceWindow
 from app import database
@@ -119,7 +119,17 @@ class MainWindow(QMainWindow):
         self.att_window.show()
         self.hide()
 
+    def check_admin_password(self):
+        password, ok = QInputDialog.getText(self, "Admin Auth", "Enter Password:", QLineEdit.EchoMode.Password)
+        if ok and password == "siriAB":
+            return True
+        elif ok:
+            QMessageBox.warning(self, "Auth Failed", "Incorrect password.")
+        return False
+
     def export_csv(self):
+        if not self.check_admin_password():
+            return
         filename, _ = QFileDialog.getSaveFileName(self, "Export CSV", "", "CSV Files (*.csv)")
         if filename:
             try:
@@ -129,6 +139,8 @@ class MainWindow(QMainWindow):
                 QMessageBox.critical(self, "Error", f"Failed to export CSV: {e}")
 
     def export_json(self):
+        if not self.check_admin_password():
+            return
         filename, _ = QFileDialog.getSaveFileName(self, "Export JSON", "", "JSON Files (*.json)")
         if filename:
             try:
@@ -138,6 +150,8 @@ class MainWindow(QMainWindow):
                 QMessageBox.critical(self, "Error", f"Failed to export JSON: {e}")
 
     def clear_logs(self):
+        if not self.check_admin_password():
+            return
         reply = QMessageBox.question(self, "Clear Logs", "Are you sure you want to clear ALL attendance logs?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
         if reply == QMessageBox.StandardButton.Yes:
             try:

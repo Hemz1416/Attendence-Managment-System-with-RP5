@@ -1,7 +1,7 @@
 import cv2
 import logging
 import numpy as np
-import torch
+import torch  # type: ignore
 from app import config
 from app import database
 from app import utils
@@ -9,7 +9,7 @@ from app import utils
 class FaceRecognizer:
     def __init__(self):
         logging.info("Loading FaceNet Recognition Model...")
-        from facenet_pytorch import InceptionResnetV1
+        from facenet_pytorch import InceptionResnetV1  # type: ignore
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         if self.device.type == "cpu":
             torch.set_num_threads(2)

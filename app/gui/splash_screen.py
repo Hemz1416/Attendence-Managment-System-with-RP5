@@ -1,9 +1,9 @@
 import sys
 import time
 import numpy as np
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QProgressBar
-from PySide6.QtCore import Qt, QThread, Signal
-from PySide6.QtGui import QFont
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QProgressBar  # type: ignore
+from PySide6.QtCore import Qt, QThread, Signal  # type: ignore
+from PySide6.QtGui import QFont  # type: ignore
 
 # We need to make sure the app directory is available
 from pathlib import Path

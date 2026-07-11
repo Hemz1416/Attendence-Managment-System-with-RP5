@@ -20,8 +20,8 @@ if str(app_dir) not in sys.path:
     sys.path.insert(0, str(app_dir))
 
 import signal
-from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import QTimer
+from PySide6.QtWidgets import QApplication  # type: ignore
+from PySide6.QtCore import QTimer  # type: ignore
 from app.gui.splash_screen import SplashScreen
 from app.gui.main_window import MainWindow
 
