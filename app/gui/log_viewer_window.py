@@ -55,8 +55,8 @@ class LogViewerWindow(QWidget):
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title.setStyleSheet("margin-bottom: 10px;")
         
-        self.table = QTableWidget(0, 4)
-        self.table.setHorizontalHeaderLabels(["Date", "Time", "Name", "Score"])
+        self.table = QTableWidget(0, 5)
+        self.table.setHorizontalHeaderLabels(["Date", "Time", "Name", "Status", "Score"])
         self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -83,9 +83,10 @@ class LogViewerWindow(QWidget):
                 self.table.setItem(row, 0, QTableWidgetItem(log.get("date", "-")))
                 self.table.setItem(row, 1, QTableWidgetItem(log.get("time", "-")))
                 self.table.setItem(row, 2, QTableWidgetItem(log.get("person_name", "Unknown")))
+                self.table.setItem(row, 3, QTableWidgetItem(log.get("status", "IN")))
                 score = log.get("recognition_score")
                 score_str = f"{score:.2f}" if score is not None else "-"
-                self.table.setItem(row, 3, QTableWidgetItem(score_str))
+                self.table.setItem(row, 4, QTableWidgetItem(score_str))
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to load logs: {e}")
             

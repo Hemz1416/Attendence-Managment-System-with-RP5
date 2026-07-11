@@ -113,9 +113,16 @@ def init_tables():
             model_name TEXT,
             detector_name TEXT,
             device TEXT,
+            status TEXT DEFAULT 'IN',
             FOREIGN KEY(person_id) REFERENCES persons(person_id)
         )
         """)
+
+        # Migration: Ensure status column exists in existing databases
+        cur.execute("PRAGMA table_info(attendance_logs)")
+        columns = [col[1] for col in cur.fetchall()]
+        if "status" not in columns:
+            cur.execute("ALTER TABLE attendance_logs ADD COLUMN status TEXT DEFAULT 'IN'")
 
         # Indexes for performance
         cur.execute("CREATE INDEX IF NOT EXISTS idx_images_person_id ON images(person_id)")
@@ -346,15 +353,27 @@ def log_recognition_event(
     except Exception as e:
         logging.warning(f" Failed to log recognition event to database: {e}")
 
-def log_attendance(person_id: int, person_name: str, recognition_score: float = None, model_name: str = "FaceNet", detector_name: str = "MediaPipe", device: str = "RP5"):
-    """Log a successful recognition as an attendance entry."""
+def log_attendance(person_id: int, person_name: str, recognition_score: float = None, model_name: str = "FaceNet", detector_name: str = "MediaPipe", device: str = "RP5") -> str:
+    """Log a successful recognition as an attendance entry with alternating status (IN/OUT)."""
     if person_id is None:
-        return
+        return "IN"
     
+    status = "IN"
     try:
         with _db_lock:
             conn = get_connection()
             cur = conn.cursor()
+            
+            # Alternate status per person globally
+            cur.execute("""
+                SELECT status FROM attendance_logs 
+                WHERE person_id = ? 
+                ORDER BY timestamp DESC LIMIT 1
+            """, (person_id,))
+            row = cur.fetchone()
+            if row and row[0] == "IN":
+                status = "OUT"
+            
             now = datetime.now()
             date_str = now.strftime("%Y-%m-%d")
             time_str = now.strftime("%H:%M:%S")
@@ -363,18 +382,19 @@ def log_attendance(person_id: int, person_name: str, recognition_score: float = 
             cur.execute("""
             INSERT INTO attendance_logs(
                 person_id, person_name, date, time, timestamp,
-                recognition_score, model_name, detector_name, device
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                recognition_score, model_name, detector_name, device, status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 person_id, person_name, date_str, time_str, timestamp_str,
                 float(recognition_score) if recognition_score is not None else None,
-                model_name, detector_name, device
+                model_name, detector_name, device, status
             ))
             conn.commit()
     except sqlite3.IntegrityError:
         pass
     except Exception as e:
         logging.error(f" Failed to log attendance: {e}")
+    return status
 
 def get_today_logs():
     """Retrieve all attendance logs for today."""
